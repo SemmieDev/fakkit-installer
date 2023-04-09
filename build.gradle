@@ -10,7 +10,7 @@ plugins {
 
 sourceCompatibility = 1.8
 version = '0.11.2'
-archivesBaseName = "fabric-installer"
+archivesBaseName = "fakkit-installer"
 
 def ENV = System.getenv()
 version = version + (ENV.GITHUB_ACTIONS ? "" : "+local")

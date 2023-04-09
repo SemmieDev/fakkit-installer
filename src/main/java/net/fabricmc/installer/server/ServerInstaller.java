@@ -18,6 +18,7 @@ package net.fabricmc.installer.server;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -30,6 +31,7 @@ import java.nio.file.StandardCopyOption;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -58,6 +60,7 @@ import net.fabricmc.installer.util.Utils;
 public class ServerInstaller {
 	private static final String servicesDir = "META-INF/services/";
 	private static final String manifestPath = "META-INF/MANIFEST.MF";
+	private static final String gameProviderServicePath = "META-INF/services/net.fabricmc.loader.impl.game.GameProvider";
 	public static final String DEFAULT_LAUNCH_JAR_NAME = "fabric-server-launch.jar";
 	private static final Pattern SIGNATURE_FILE_PATTERN = Pattern.compile("META-INF/[^/]+\\.(SF|DSA|RSA|EC)");
 
@@ -128,6 +131,51 @@ public class ServerInstaller {
 				try (JarFile jarFile = new JarFile(libraryFile.toFile())) {
 					Manifest manifest = jarFile.getManifest();
 					mainClassManifest = manifest.getMainAttributes().getValue("Main-Class");
+
+					// Extract the contents of fakkit.jar into the fabric loader jar to turn fakkit into the embedded game provider
+					progress.updateProgress(Utils.BUNDLE.getString("progress.fakkit.extract"));
+					ByteArrayOutputStream output = new ByteArrayOutputStream();
+
+					try (
+							ZipFile fabricLoaderZip = new ZipFile(libraryFile.toFile());
+							ZipFile fakkitZip = new ZipFile(dir.resolve("fakkit.jar").toFile());
+							ZipOutputStream tmpOutput = new ZipOutputStream(output)
+					) {
+						Enumeration<? extends ZipEntry> entries = fabricLoaderZip.entries();
+						ZipEntry zipEntry;
+
+						while (entries.hasMoreElements()) {
+							zipEntry = entries.nextElement();
+							tmpOutput.putNextEntry(zipEntry);
+
+							InputStream inputStream;
+
+							if (zipEntry.getName().equals(gameProviderServicePath)) {
+								inputStream = fakkitZip.getInputStream(fakkitZip.getEntry(gameProviderServicePath));
+							} else {
+								inputStream = fabricLoaderZip.getInputStream(zipEntry);
+							}
+
+							Utils.transfer(inputStream, tmpOutput);
+
+							tmpOutput.closeEntry();
+						}
+
+						entries = fakkitZip.entries();
+
+						while (entries.hasMoreElements()) {
+							zipEntry = entries.nextElement();
+							if (fabricLoaderZip.getEntry(zipEntry.getName()) != null) continue;
+
+							tmpOutput.putNextEntry(zipEntry);
+
+							Utils.transfer(fakkitZip.getInputStream(zipEntry), tmpOutput);
+
+							tmpOutput.closeEntry();
+						}
+					}
+
+					Files.write(libraryFile, output.toByteArray());
 				}
 			}
 		}

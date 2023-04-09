@@ -16,6 +16,7 @@
 
 package net.fabricmc.installer;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.invoke.MethodHandle;
@@ -38,7 +39,6 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 import java.util.zip.ZipError;
 
-import net.fabricmc.installer.server.MinecraftServerDownloader;
 import net.fabricmc.installer.server.ServerInstaller;
 import net.fabricmc.installer.util.InstallerProgress;
 import net.fabricmc.installer.util.Utils;
@@ -71,18 +71,18 @@ public final class ServerLauncher {
 
 	// Validates and downloads/installs the server if required
 	private static LaunchData initialise() throws IOException {
-		Properties properties = readProperties();
+		//Properties properties = readProperties();
 
 		String customLoaderPath = System.getProperty("fabric.customLoaderPath"); // intended for testing and development
 		LoaderVersion loaderVersion;
 
 		if (customLoaderPath == null) {
-			loaderVersion = new LoaderVersion(Objects.requireNonNull(properties.getProperty("fabric-loader-version"), "no loader-version specified in " + INSTALL_CONFIG_NAME));
+			loaderVersion = new LoaderVersion(Objects.requireNonNull(/*properties.getProperty("fabric-loader-version")*/System.getProperty("fabric.loader.version"), /*"no loader-version specified in " + INSTALL_CONFIG_NAME*/"no loader version specified"));
 		} else {
 			loaderVersion = new LoaderVersion(Paths.get(customLoaderPath));
 		}
 
-		String gameVersion = Objects.requireNonNull(properties.getProperty("game-version"), "no game-version specified in " + INSTALL_CONFIG_NAME);
+		String gameVersion = Objects.requireNonNull(/*properties.getProperty("game-version")*/System.getProperty("fabric.game.version"), /*"no game-version specified in " + INSTALL_CONFIG_NAME*/"no game version specified");
 
 		// 0.12 or higher is required
 		validateLoaderVersion(loaderVersion);
@@ -91,15 +91,16 @@ public final class ServerLauncher {
 		Path dataDir = baseDir.resolve(DATA_DIR);
 
 		// Vanilla server jar
-		String customServerJar = System.getProperty("fabric.installer.server.gameJar", null);
-		Path serverJar = customServerJar == null ? dataDir.resolve(String.format("%s-server.jar", gameVersion)) : Paths.get(customServerJar);
+		String customServerJar = Objects.requireNonNull(System.getProperty("fabric.installer.server.gameJar", null), "no server jar specified");
+		Path serverJar = /*customServerJar == null ? dataDir.resolve(String.format("%s-server.jar", gameVersion)) :*/ Paths.get(customServerJar);
 		// Includes the mc version as this jar contains intermediary
-		Path serverLaunchJar = dataDir.resolve(String.format("fabric-loader-server-%s-minecraft-%s.jar", loaderVersion.name, gameVersion));
+		Path serverLaunchJar = dataDir.resolve(String.format(/*"fabric-loader-server-%s-minecraft-%s.jar"*/"fabric-loader-server-%s.jar", loaderVersion.name/*, gameVersion*/));
 
 		if (!Files.exists(serverJar)) {
-			InstallerProgress.CONSOLE.updateProgress(Utils.BUNDLE.getString("progress.download.minecraft"));
+			throw new FileNotFoundException("Specified server jar does not exist");
+			/*InstallerProgress.CONSOLE.updateProgress(Utils.BUNDLE.getString("progress.download.minecraft"));
 			MinecraftServerDownloader downloader = new MinecraftServerDownloader(gameVersion);
-			downloader.downloadMinecraftServer(serverJar);
+			downloader.downloadMinecraftServer(serverJar);*/
 		}
 
 		if (Files.exists(serverLaunchJar)) { // install exists, verify libs exist and determine main class

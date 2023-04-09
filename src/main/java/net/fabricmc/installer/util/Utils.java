@@ -19,6 +19,7 @@ package net.fabricmc.installer.util;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -233,6 +234,15 @@ public class Utils {
 		}
 
 		return 0;
+	}
+
+	public static void transfer(InputStream input, OutputStream output) throws IOException {
+		byte[] buffer = new byte[1024];
+		int read;
+
+		while ((read = input.read(buffer, 0, buffer.length)) >= 0) {
+			output.write(buffer, 0, read);
+		}
 	}
 
 	private static int compareVersionGroups(String groupA, String groupB) {
