@@ -61,6 +61,9 @@ public final class ServerLauncher {
 		// Set the game jar path to bypass loader's own lookup
 		System.setProperty("fabric.gameJarPath", launchData.serverJar.toAbsolutePath().toString());
 
+		// Skip the default mc provider
+		System.setProperty("fabric.skipMcProvider", "true");
+
 		@SuppressWarnings("resource")
 		URLClassLoader launchClassLoader = new URLClassLoader(new URL[]{launchData.launchJar.toUri().toURL()});
 
@@ -94,7 +97,7 @@ public final class ServerLauncher {
 		String customServerJar = Objects.requireNonNull(System.getProperty("fabric.installer.server.gameJar", null), "no server jar specified");
 		Path serverJar = /*customServerJar == null ? dataDir.resolve(String.format("%s-server.jar", gameVersion)) :*/ Paths.get(customServerJar);
 		// Includes the mc version as this jar contains intermediary
-		Path serverLaunchJar = dataDir.resolve(String.format(/*"fabric-loader-server-%s-minecraft-%s.jar"*/"fabric-loader-server-%s.jar", loaderVersion.name/*, gameVersion*/));
+		Path serverLaunchJar = dataDir.resolve(String.format("fabric-loader-server-%s-minecraft-%s.jar", loaderVersion.name, gameVersion));
 
 		if (!Files.exists(serverJar)) {
 			throw new FileNotFoundException("Specified server jar does not exist");
